@@ -134,7 +134,8 @@ export async function runLocal(prompt: string, opts: RunAgentOpts, servers = LOC
               emit({ kind: "done", isError: false });
               return;
             }
-            outcome = { content: verdict.message, isError: true };
+            // Small models retry a refused call and ask again; tell them to stop and ask the user instead.
+            outcome = { content: `${verdict.message} Do not try it again. Say what you wanted to do and ask the user how to proceed.`, isError: true };
           } else outcome = await runLocalTool(call.name, args, opts.cwd, signal);
         }
         emit({ kind: "tool_result", toolUseId: call.id, content: outcome.content, isError: outcome.isError });
