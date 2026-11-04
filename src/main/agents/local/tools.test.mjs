@@ -1,6 +1,6 @@
 // .mjs keeps the bun:test import out of `bun run typecheck`.
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { globToRegExp, resolveInside, runLocalTool } from "./tools.ts";
@@ -40,6 +40,15 @@ describe("symlinks can't lead out of the working folder", () => {
     expect(await run("LS", { path: "linkdir" })).toMatchObject({ isError: true });
   });
 
+  test("a link to a path that doesn't exist yet can't be used to create a file outside", async () => {
+    symlinkSync(join(outside, "created.txt"), join(cwd, "dangling"));
+    symlinkSync(join(outside, "newdir"), join(cwd, "danglingdir"));
+    expect(await run("Write", { file_path: "dangling", content: "x" })).toMatchObject({ isError: true });
+    expect(await run("Write", { file_path: "danglingdir/f.txt", content: "x" })).toMatchObject({ isError: true });
+    expect(existsSync(join(outside, "created.txt"))).toBe(false);
+    expect(existsSync(join(outside, "newdir"))).toBe(false);
+  });
+
   test("Glob and Grep don't follow links out", async () => {
     expect((await run("Grep", { pattern: "secret" })).content).toBe("No matches.");
     expect((await run("Glob", { pattern: "**/*.txt" })).content).not.toContain("secret.txt");
@@ -52,7 +61,7 @@ describe("tools", () => {
   });
 
   test("LS lists with a slash after folders", async () => {
-    expect((await run("LS", {})).content.split("\n")).toEqual(["a.txt", "linkdir", "linkfile", "node_modules/", "src/"]);
+    expect((await run("LS", {})).content.split("\n")).toEqual(["a.txt", "dangling", "danglingdir", "linkdir", "linkfile", "node_modules/", "src/"]);
   });
 
   test("Glob matches nested paths and skips dependency folders", async () => {

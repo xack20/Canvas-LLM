@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdir, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { shellEnv } from "../../shellPath";
 
@@ -74,6 +74,8 @@ export async function resolveInside(cwd: string, p: string): Promise<string> {
       return abs;
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT" || dirname(probe) === probe) throw err;
+      // A link whose target doesn't exist yet would be written through to wherever it points.
+      if ((await lstat(probe).catch(() => null))?.isSymbolicLink()) throw new Error(`${p} goes through a link that points nowhere.`);
     }
   }
 }
