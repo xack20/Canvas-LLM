@@ -29,7 +29,8 @@ beforeAll(() => {
         );
       }
       const toolText = body.messages.find((m) => m.role === "tool").content;
-      return sse(delta({ content: `saw: ${toolText}` }, "stop"), { choices: [], usage: { prompt_tokens: 10, completion_tokens: 4 } });
+      // Real models often open with blank lines.
+      return sse(delta({ content: "\n\n" }), delta({ content: `saw: ${toolText}` }, "stop"), { choices: [], usage: { prompt_tokens: 10, completion_tokens: 4 } });
     },
   });
   const base = `http://localhost:${server.port}`;
@@ -68,7 +69,7 @@ describe("runLocal", () => {
     expect(events.map((e) => e.kind)).toEqual(["tool_use", "tool_result", "text_delta", "done"]);
     expect(events[0]).toMatchObject({ toolUseId: "c1", name: "Write", input: { file_path: "out.txt", content: "hi" } });
     expect(existsSync(join(cwd, "out.txt"))).toBe(true);
-    expect(events[2].text).toContain("saw: Wrote 2 characters to out.txt");
+    expect(events[2].text).toStartWith("saw: Wrote 2 characters to out.txt");
     expect(events.at(-1)).toMatchObject({ kind: "done", isError: false, usage: { inputTokens: 10, outputTokens: 4 } });
   });
 

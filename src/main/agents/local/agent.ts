@@ -82,7 +82,17 @@ export async function runLocal(prompt: string, opts: RunAgentOpts, servers = LOC
       { role: "system", content: systemText(opts) },
       { role: "user", content: prompt },
     ];
-    const sink = { text: (text: string) => emit({ kind: "text_delta", text }), thinking: (text: string) => emit({ kind: "thinking_delta", text }) };
+    // Models often open with blank lines; drop them until the reply has real text.
+    let replyStarted = false;
+    const sink = {
+      text: (text: string) => {
+        const shown = replyStarted ? text : text.replace(/^\s+/, "");
+        if (!shown) return;
+        replyStarted = true;
+        emit({ kind: "text_delta", text: shown });
+      },
+      thinking: (text: string) => emit({ kind: "thinking_delta", text }),
+    };
     const totals = { prompt_tokens: 0, completion_tokens: 0 };
     const signal = opts.signal ?? new AbortController().signal;
     const ask = (questions: Parameters<typeof requestAnswer>[0], s: AbortSignal) => requestAnswer(questions, opts.client, opts.nodeId, s);
