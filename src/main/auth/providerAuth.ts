@@ -3,12 +3,14 @@ import type { Provider } from "@shared/types";
 import type { ProviderAuthStatus } from "@shared/ipc";
 import { shellEnv } from "../shellPath";
 import { resolveCommandLine } from "../commandLine";
+import { listLocalModels } from "../agents/local/servers";
 
 const DEFAULT_BIN: Record<Provider, string> = {
   claude: "claude",
   codex: "codex",
   cursor: "cursor-agent",
   kimi: "kimi",
+  local: "",
 };
 
 const PROBE_TIMEOUT_MS = 5_000;
@@ -101,6 +103,8 @@ export async function getProviderAuthStatus(
       return probeCursor(bin, resolved);
     case "kimi":
       return probeKimi(bin, resolved);
+    case "local":
+      return probeLocal();
   }
 }
 
@@ -207,6 +211,18 @@ async function probeKimi(bin: string, binPath: string | null): Promise<ProviderA
     authenticated: /\bmodels=[1-9]/.test(combined),
     binPath,
     detail: combined || undefined,
+  };
+}
+
+// There is nothing to sign in to: the provider is ready when a local server has a model.
+async function probeLocal(): Promise<ProviderAuthStatus> {
+  const models = await listLocalModels();
+  return {
+    provider: "local",
+    installed: models.length > 0,
+    authenticated: models.length > 0,
+    binPath: null,
+    detail: models.length > 0 ? `${models.length} model${models.length === 1 ? "" : "s"} available` : "No LM Studio or Ollama server with a model is running",
   };
 }
 

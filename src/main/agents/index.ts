@@ -4,6 +4,7 @@ import { approvalRefusal } from "./approvalSupport";
 import { runCodex } from "./codex";
 import { runCursor } from "./cursor";
 import { runKimi } from "./kimi";
+import { runLocal } from "./local/agent";
 import type { RunAgentOpts, RunnerEvent } from "./types";
 
 export type { RunAgentOpts, RunnerEvent };
@@ -29,5 +30,7 @@ export async function runAgent(
       return runCursor(prompt, opts);
     case "kimi":
       return runKimi(prompt, opts);
+    case "local":
+      return runLocal(prompt, opts);
   }
 }

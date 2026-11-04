@@ -15,8 +15,8 @@ function loadKimiModels(): Promise<KimiModelInfo[]> {
 }
 
 /**
- * A node's context size for the badge and bar: Claude, Codex and Kimi nodes. Cursor reports
- * nothing, so it gets none. A Kimi node that was never measured (auto mode) is estimated
+ * A node's context size for the badge and bar: Claude, Codex and Kimi nodes. Cursor and local models report
+ * nothing, so they get none. A Kimi node that was never measured (auto mode) is estimated
  * against its model's configured window instead of the 200k default.
  */
 export function useContextView(nodeId: NodeId): ContextView | null {
@@ -36,7 +36,7 @@ export function useContextView(nodeId: NodeId): ContextView | null {
   }, [provider, ownModel]);
 
   return useMemo(
-    () => (provider === "cursor" ? null : contextView(nodeId, nodes, { defaultWindow: provider === "kimi" ? kimiWindow : undefined })),
+    () => (provider === "cursor" || provider === "local" ? null : contextView(nodeId, nodes, { defaultWindow: provider === "kimi" ? kimiWindow : undefined })),
     [provider, nodeId, nodes, kimiWindow],
   );
 }

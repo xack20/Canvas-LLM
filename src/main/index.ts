@@ -1,4 +1,5 @@
 import { listKimiModels } from "./agents/kimiModels";
+import { listLocalModels } from "./agents/local/servers";
 import { splitClaudeModels } from "@shared/modelCatalog";
 import { applyModelChecks, runModelChecks, type Candidate } from "./modelCheck";
 import { createProbe } from "./modelProbes";
@@ -878,6 +879,7 @@ function registerIpc(): void {
   }, "shared");
 
   api.handle("providers:kimiModels", async () => listKimiModels(), "shared");
+  api.handle("providers:localModels", async () => listLocalModels(), "shared");
 
   api.handle("providers:modelChecks", async () => readModelChecks(), "shared");
 

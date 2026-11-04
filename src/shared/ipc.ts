@@ -7,6 +7,7 @@ import type {
   ClaudeModelList,
   CodexRuntimeInfo,
   KimiModelInfo,
+  LocalModelInfo,
   ModelChecks,
   ModelCheckReport,
   CompactionTrigger,
@@ -322,6 +323,7 @@ export type LmcApi = {
     claudeModels(): Promise<ClaudeModelList>;
     /** Model aliases from the user's Kimi config. */
     kimiModels(): Promise<KimiModelInfo[]>;
+    localModels(): Promise<LocalModelInfo[]>;
     /** Saved results of "Check my models". */
     modelChecks(): Promise<ModelChecks>;
     /** Sends each latest model one tiny prompt and saves which ones answered. */

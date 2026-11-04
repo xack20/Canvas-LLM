@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { GitCompare } from "lucide-react";
-import type { CodexModelInfo, KimiModelInfo, NodeId, Provider } from "@shared/types";
+import type { CodexModelInfo, KimiModelInfo, LocalModelInfo, NodeId, Provider } from "@shared/types";
 import { findClaudeModel } from "@shared/claudeModels";
 import { splitClaudeModels, withoutFailed } from "@shared/modelCatalog";
 import { useCanvasStore } from "@/hooks/useCanvasStore";
@@ -92,7 +92,9 @@ function CompareModelRows({ ownKey, picked, full, onToggle }: RowsProps) {
   const claude = useClaudeModelList()?.models;
   const [codex, setCodex] = useState<CodexModelInfo[]>([]);
   const [kimi, setKimi] = useState<KimiModelInfo[]>([]);
+  const [local, setLocal] = useState<LocalModelInfo[]>([]);
   useEffect(() => {
+    void window.api.providers.localModels().then(setLocal).catch(() => setLocal([]));
     void loadChecks();
     void window.api.providers.codexRuntime().then((r) => setCodex(r.models)).catch(() => setCodex([]));
     void window.api.providers.kimiModels().then(setKimi).catch(() => setKimi([]));
@@ -112,12 +114,14 @@ function CompareModelRows({ ownKey, picked, full, onToggle }: RowsProps) {
       checks,
       (m) => m.id,
     ).map((m) => ({ provider: "kimi" as const, model: m.id, label: m.displayName }));
+    const localTargets = local.map((m) => ({ provider: "local" as const, model: m.id, label: m.displayName }));
     return [
       { provider: "claude" as Provider, title: "Claude", targets: claudeTargets },
       { provider: "codex" as Provider, title: "Codex", targets: codexTargets },
       { provider: "kimi" as Provider, title: "Kimi", targets: kimiTargets },
+      { provider: "local" as Provider, title: "Local", targets: localTargets },
     ];
-  }, [claude, codex, kimi, checks]);
+  }, [claude, codex, kimi, local, checks]);
 
   const pickedKeys = new Set(picked.map(targetKey));
   return (

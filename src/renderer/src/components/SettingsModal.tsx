@@ -258,6 +258,7 @@ export function SettingsModal({ open, onClose }: Props) {
                                 {provider}
                               </div>
                               <div className="grid gap-1.5">
+                                {provider !== "local" && (
                                 <div>
                                   <label className="text-xs font-medium text-muted-foreground">
                                     binary path
@@ -273,6 +274,7 @@ export function SettingsModal({ open, onClose }: Props) {
                                     placeholder={provider}
                                   />
                                 </div>
+                                )}
                                 <div>
                                   <label className="text-xs font-medium text-muted-foreground">
                                     {provider === "claude" ? "model" : "model id"}

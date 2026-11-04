@@ -15,6 +15,7 @@ export function LinkProvidersStep({ onContinue, onSkip }: Props) {
     codex: false,
     cursor: false,
     kimi: false,
+    local: false,
   });
 
   const handleAuthChange = useCallback((provider: Provider, ok: boolean) => {
