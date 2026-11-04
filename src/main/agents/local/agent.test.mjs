@@ -90,6 +90,7 @@ describe("runLocal", () => {
     expect(client.sent[0].payload.questions[0].question).toBe("Allow the local model to use Write?");
     expect(existsSync(join(cwd, "out.txt"))).toBe(false);
     expect(events.find((e) => e.kind === "tool_result")).toMatchObject({ isError: true });
+    expect(events.find((e) => e.kind === "tool_result").content).toContain("Do not try it again");
     expect(events.at(-1).kind).toBe("done");
   });
 
