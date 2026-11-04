@@ -32,4 +32,10 @@ export const PROVIDER_INFO: Record<Provider, ProviderInfo> = {
     tagline: "Moonshot AI. Sign in with Kimi Code.",
     installUrl: "https://moonshotai.github.io/kimi-code/",
   },
+  local: {
+    id: "local",
+    name: "Local",
+    tagline: "A model on this machine, served by LM Studio or Ollama. No account needed.",
+    installUrl: "https://lmstudio.ai",
+  },
 };

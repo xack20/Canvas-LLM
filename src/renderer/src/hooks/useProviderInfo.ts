@@ -16,6 +16,7 @@ const DEFAULT_MODEL_BY_PROVIDER: Record<Exclude<Provider, "claude">, string> = {
   codex: "", // empty: Codex uses its own default
   cursor: "auto",
   kimi: "", // empty: let Kimi use its own default_model
+  local: "", // empty: the first model a running local server offers
 };
 
 /**
@@ -64,6 +65,7 @@ export function useProviderInfo(canvasProvider?: Provider): ProviderInfoState {
       codex: prettyModelLabel("codex", DEFAULT_MODEL_BY_PROVIDER.codex),
       cursor: prettyModelLabel("cursor", DEFAULT_MODEL_BY_PROVIDER.cursor),
       kimi: prettyModelLabel("kimi", DEFAULT_MODEL_BY_PROVIDER.kimi),
+      local: prettyModelLabel("local", DEFAULT_MODEL_BY_PROVIDER.local),
     }
   );
 
@@ -102,6 +104,7 @@ export function prettyModelLabel(provider: Provider, modelId?: string): string {
     return prettyOpenAIModelName(modelId);
   }
   if (provider === "kimi") return modelId ? modelId.replace(/^kimi-code\//, "") : "Default";
+  if (provider === "local") return modelId ? modelId.replace(/^(lmstudio|ollama):/, "") : "Local model";
   return modelId ?? "Default";
 }
 

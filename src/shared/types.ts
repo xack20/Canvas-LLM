@@ -168,6 +168,14 @@ export type KimiModelInfo = {
   latest: boolean;
 };
 
+/** A model served by a local runtime. `id` is `<server>:<name>`, which is what a node stores. */
+export type LocalModelInfo = {
+  id: string;
+  displayName: string;
+  server: "lmstudio" | "ollama";
+  contextSize?: number;
+};
+
 /** One model's last check: a tiny prompt answered (`ok`) or refused. */
 export type ModelCheck = { ok: boolean; checkedAt: number; error?: string };
 /** Saved check results, by provider and model id. A model with no entry is "not checked yet". */
@@ -285,9 +293,9 @@ export type CanvasEdge = {
   sourceYOffset?: number;
 };
 
-export type Provider = "claude" | "codex" | "cursor" | "kimi";
+export type Provider = "claude" | "codex" | "cursor" | "kimi" | "local";
 
-export const PROVIDERS: readonly Provider[] = ["claude", "codex", "cursor", "kimi"] as const;
+export const PROVIDERS: readonly Provider[] = ["claude", "codex", "cursor", "kimi", "local"] as const;
 
 export type ProviderConfig = {
   /** Override the default binary name. */

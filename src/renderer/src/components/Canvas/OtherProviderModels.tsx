@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import type { CodexModelInfo, KimiModelInfo, NodeId, NodeSettings, Provider } from "@shared/types";
+import type { CodexModelInfo, KimiModelInfo, LocalModelInfo, NodeId, NodeSettings, Provider } from "@shared/types";
 import { isNewSinceCheck, withoutFailed } from "@shared/modelCatalog";
 import { useCanvasStore } from "@/hooks/useCanvasStore";
 import { useModelChecksStore } from "@/hooks/useModelChecksStore";
@@ -13,7 +13,7 @@ type Props = { nodeId: NodeId; close: () => void };
 const RESET: Partial<NodeSettings> = { reasoningEffort: undefined, serviceTier: undefined };
 
 /**
- * The Codex, Cursor and Kimi sections of the node model picker. Picking a model sets the node's
+ * The Codex, Cursor, Kimi and Local sections of the node model picker. Picking a model sets the node's
  * provider and model together. A section is hidden when its CLI has nothing to offer (not
  * installed, or no models in its config). Mounted with the picker, so lists are read on open.
  */
@@ -53,6 +53,10 @@ export function OtherProviderModels({ nodeId, close }: Props) {
       <KimiSection
         activeModel={provider === "kimi" ? nodeModel("kimi") : undefined}
         onSelect={(model) => pick({ provider: "kimi", model, ...RESET })}
+      />
+      <LocalSection
+        activeModel={provider === "local" ? nodeModel("local") : undefined}
+        onSelect={(model) => pick({ provider: "local", model, ...RESET })}
       />
     </>
   );
@@ -167,6 +171,40 @@ function KimiSection({
       <OlderModels count={older.length} defaultOpen={older.some((m) => m.id === activeModel)}>
         {older.map(row)}
       </OlderModels>
+    </Section>
+  );
+}
+
+/** Models served by LM Studio or Ollama right now; hidden when neither has one. */
+function LocalSection({
+  activeModel,
+  onSelect,
+}: {
+  activeModel: string | undefined;
+  onSelect: (model: string) => void;
+}) {
+  const [models, setModels] = useState<LocalModelInfo[]>([]);
+  useEffect(() => {
+    void window.api.providers
+      .localModels()
+      .then(setModels)
+      .catch(() => setModels([]));
+  }, []);
+  if (models.length === 0) return null;
+  return (
+    <Section provider="local" title="Local">
+      {models.map((model) => (
+        <ModelOption
+          key={model.id}
+          provider="local"
+          active={activeModel === model.id}
+          title={model.displayName}
+          subtitle={`${model.server === "lmstudio" ? "LM Studio" : "Ollama"}${
+            model.contextSize ? ` · ${Math.round(model.contextSize / 1024)}K context` : ""
+          }`}
+          onSelect={() => onSelect(model.id)}
+        />
+      ))}
     </Section>
   );
 }

@@ -16,7 +16,31 @@ export function ProviderLogo({ provider, size = 10, className }: Props) {
       return <CursorLogo size={size} className={className} />;
     case "kimi":
       return <KimiLogo size={size} className={className} />;
+    case "local":
+      return <LocalLogo size={size} className={className} />;
   }
+}
+
+// A plain chip mark: the model runs on this machine.
+function LocalLogo({ size = 10, className }: { size?: number; className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      className={className ?? "opacity-90"}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="6" y="6" width="12" height="12" rx="2" />
+      <path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4" />
+    </svg>
+  );
 }
 
 function ClaudeLogo({ size = 10, className }: { size?: number; className?: string }) {

@@ -1,4 +1,4 @@
-import type { CanUseTool } from "@anthropic-ai/claude-agent-sdk";
+import type { CanUseTool, PermissionResult } from "@anthropic-ai/claude-agent-sdk";
 import type { AskUserQuestion, AskUserResponsePayload } from "@shared/ipc";
 
 type Ask = (questions: AskUserQuestion[], signal: AbortSignal) => Promise<AskUserResponsePayload>;
@@ -53,11 +53,11 @@ export function previewToolCall(toolName: string, input: Record<string, unknown>
   return clip(picked ?? JSON.stringify(input));
 }
 
-export function approvalQuestion(toolName: string, input: Record<string, unknown>): AskUserQuestion {
+export function approvalQuestion(toolName: string, input: Record<string, unknown>, agent = "Claude"): AskUserQuestion {
   return {
     id: "decision",
     header: "Approval",
-    question: `Allow Claude to use ${toolName}?`,
+    question: `Allow ${agent} to use ${toolName}?`,
     multiSelect: false,
     options: [
       { label: ALLOW_ONCE, description: "Run this one call.", preview: previewToolCall(toolName, input) },
@@ -65,7 +65,7 @@ export function approvalQuestion(toolName: string, input: Record<string, unknown
         label: alwaysLabel(toolName),
         description: "Skip this question for the tool in this node until LMCanvas restarts.",
       },
-      { label: DENY, description: "Don't run it; Claude is told you said no." },
+      { label: DENY, description: `Don't run it; ${agent} is told you said no.` },
     ],
   };
 }
@@ -74,29 +74,39 @@ function alwaysLabel(toolName: string): string {
   return `Always allow ${toolName}`;
 }
 
+type ApproverDeps = { ask: Ask; nodeId: string; /** Who is asking, as the prompt names it. */ agent?: string };
+
+/** Asks the user about one tool call (unless it needs no asking) and says whether it may run. */
+export async function approveToolCall(
+  deps: ApproverDeps,
+  toolName: string,
+  input: Record<string, unknown>,
+  signal: AbortSignal,
+): Promise<PermissionResult> {
+  if (!needsApproval(toolName, deps.nodeId)) return { behavior: "allow", updatedInput: input };
+
+  let response: AskUserResponsePayload;
+  try {
+    response = await deps.ask([approvalQuestion(toolName, input, deps.agent)], signal);
+  } catch {
+    // Stop pressed or the window closed while waiting.
+    return { behavior: "deny", message: "The run was stopped before this was approved.", interrupt: true };
+  }
+  if (response.cancelled) {
+    return { behavior: "deny", message: "Approval was cancelled.", interrupt: true };
+  }
+
+  const answer = response.answers.decision;
+  const choice = Array.isArray(answer) ? answer[0] : answer;
+  if (choice === ALLOW_ONCE) return { behavior: "allow", updatedInput: input };
+  if (choice === alwaysLabel(toolName)) {
+    allowedByNode.set(deps.nodeId, new Set(allowedByNode.get(deps.nodeId)).add(toolName));
+    return { behavior: "allow", updatedInput: input };
+  }
+  return { behavior: "deny", message: `The user declined this ${toolName} call.` };
+}
+
 /** The `canUseTool` hook for a node whose approval mode is `ask`. */
-export function createToolApprover(deps: { ask: Ask; nodeId: string }): CanUseTool {
-  return async (toolName, input, { signal }) => {
-    if (!needsApproval(toolName, deps.nodeId)) return { behavior: "allow", updatedInput: input };
-
-    let response: AskUserResponsePayload;
-    try {
-      response = await deps.ask([approvalQuestion(toolName, input)], signal);
-    } catch {
-      // Stop pressed or the window closed while waiting.
-      return { behavior: "deny", message: "The run was stopped before this was approved.", interrupt: true };
-    }
-    if (response.cancelled) {
-      return { behavior: "deny", message: "Approval was cancelled.", interrupt: true };
-    }
-
-    const answer = response.answers.decision;
-    const choice = Array.isArray(answer) ? answer[0] : answer;
-    if (choice === ALLOW_ONCE) return { behavior: "allow", updatedInput: input };
-    if (choice === alwaysLabel(toolName)) {
-      allowedByNode.set(deps.nodeId, new Set(allowedByNode.get(deps.nodeId)).add(toolName));
-      return { behavior: "allow", updatedInput: input };
-    }
-    return { behavior: "deny", message: `The user declined this ${toolName} call.` };
-  };
+export function createToolApprover(deps: ApproverDeps): CanUseTool {
+  return (toolName, input, { signal }) => approveToolCall(deps, toolName, input, signal);
 }
