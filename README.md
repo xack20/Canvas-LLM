@@ -4,7 +4,7 @@ A fully local, canvas-based branching AI conversation tool. The Electron app dri
 
 Each conversation is a tree of message nodes on a canvas. Branch from any node to fork the conversation history, or highlight text in a response to branch from that phrase. Canvases and settings persist to `~/.local-lmcanvas/`; each provider's sessions stay in its CLI's own folder.
 
-> **This is a fork.** [xack20/Canvas-LLM](https://github.com/xack20/Canvas-LLM) is based on [max-lee-dev/local-lmcanvas](https://github.com/max-lee-dev/local-lmcanvas) v1.0.4. It adds **browser access over Tailscale**, **context sizes and compaction** for Claude, a per-node Claude model picker, and several canvas and saving improvements. See [What's different in this fork](#whats-different-in-this-fork). All fork work lives on the `local/model-labels` branch.
+> **This is a fork.** [xack20/Canvas-LLM](https://github.com/xack20/Canvas-LLM) is based on [max-lee-dev/local-lmcanvas](https://github.com/max-lee-dev/local-lmcanvas) v1.0.4. It adds **browser access over Tailscale**, **context sizes and compaction**, **every provider's models in one per-node picker** (Claude, Codex, Cursor, Kimi, and local LM Studio or Ollama models), **ask-before-acting approvals**, **compare on one prompt**, and several canvas and saving improvements. See [What's different in this fork](#whats-different-in-this-fork). The default branch is `main`; changes reach it through pull requests.
 
 ## What's different in this fork
 
@@ -14,14 +14,15 @@ Use LMCanvas from your other computers in a web browser while the desktop app is
 
 ### Context sizes and compaction
 
-Long Claude conversations no longer run blind. [How it works](#context-window).
+Long conversations no longer run blind. Sizes show on Claude, Codex and Kimi nodes; compaction and fitting are Claude-only. [How it works](#context-window).
 
 - **Sizes on every Claude node:** its own size and the total from the root down to it (`+30k · 42k`), measured by Claude Code, with a bar that turns amber and then red as the window fills.
+- **Codex and Kimi nodes show sizes too:** exact for Codex and for Kimi in ask mode, estimated for Kimi in auto mode.
 - **Compaction you can see:** "Compacting conversation…" while Claude Code compacts, and a divider in the reply afterwards.
 - **Compaction you control:** **Compact this node** in place, or **Continue from summary** in a new node, with an optional focus. Both can be stopped.
 - **Long branches are fitted instead of failing:** a replayed branch is fitted to the model's window, and a session that overflows is compacted and retried once.
 
-### Claude improvements
+### Models, providers and agents
 
 - **Runs your installed `claude` CLI.** It runs the Claude binary set in Settings: by default `claude`, looked up on your `PATH`, and `~/` paths work. It must be an executable file; shell aliases and functions don't count. If it isn't one, or the field is empty, it falls back to the Agent SDK's bundled CLI (Claude Code 2.1.141), which is too old for newer models such as Opus 5.5. Chats, canvas naming, group summaries, the model list, compaction and replay summaries all use it.
 - **Any Claude Code model, per node.** The node model picker lists the models your installed Claude Code offers, asking it directly (via the Agent SDK's `supportedModels()`) without your Claude Code settings, so a `model` or `availableModels` set in `~/.claude/settings.json` isn't reflected. The list covers aliases such as Opus 5.5, Fable 5.1, Sonnet 5.5 and Haiku 4.5, plus pinned older versions.
@@ -72,6 +73,7 @@ Long Claude conversations no longer run blind. [How it works](#context-window).
 - [Node.js](https://nodejs.org) 20+ on your `PATH`: the dev and build tools run under Node
 - macOS / Linux / Windows (see [Install on Windows](#install-on-windows))
 - For browser access only: a Mac with the [Tailscale app](https://tailscale.com/download/mac) installed at `/Applications/Tailscale.app` and signed in, plus Tailscale signed in to the same account on the other computer.
+- Optional providers: the Kimi Code CLI (`kimi`), the Cursor CLI (`cursor-agent`), or [LM Studio](https://lmstudio.ai) / [Ollama](https://ollama.com) with its local server running (for the Local provider). Each only needs to be installed; a provider that isn't shows as not installed.
 - Optional: the Codex CLI, for the Codex provider (`codex` on your `PATH`, or its path in Settings → **advanced** → **codex** → **binary path**) and for `codex:smoke` (`codex` on your `PATH`, or set `CODEX_BIN`).
 
 Verify Claude Code works:
@@ -405,7 +407,8 @@ src/
 │   │                  systemEvents.ts (compaction events), compaction.ts (/compact in place or on a copy),
 │   │                  modelWindows.ts, replayFit.ts + replaySummary.ts (fitting a replay),
 │   │                  overflowRetry.ts
-│   ├── agents/        provider adapters and persistent Codex app-server transport
+│   ├── agents/        provider adapters (Codex app-server, Cursor, Kimi incl. kimi acp) and local/
+│   │                  (LM Studio and Ollama: model discovery, chat stream, tools, agent loop)
 │   ├── web/           browser access: service.ts (Tailscale checks, port, keep-awake, on/off),
 │   │                  loopback server, security gate, Tailscale Serve control, paired devices,
 │   │                  browser clients (reconnect + replay), canvas locks
@@ -433,6 +436,7 @@ In the desktop app, renderer → main calls go over IPC (`window.api.canvases.li
 ├── settings.json        among other things: default provider, each provider's binary path and model, the
 │                        node settings you changed last, recent folders and branches, browser-access
 │                        on/off and keep-awake, and the system prompt (no field in Settings; edit it here)
+├── model-checks.json    results of "Check my models": which models your plan accepts
 ├── model-windows.json   context window per Claude model, as measured (sizes replays to fit; read at launch)
 └── web-devices.json     paired browsers: name, dates, and a hash of each device key
 ```
