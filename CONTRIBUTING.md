@@ -17,7 +17,7 @@ bun install
 bun run dev
 ```
 
-This copy is the [xack20/local-lmcanvas](https://github.com/xack20/local-lmcanvas) fork. To work on it, clone the fork (its default branch is `main`). The test, channel-scope and browser-adapter steps below apply to the fork only; upstream has none of those files.
+This copy is the [xack20/Canvas-LLM](https://github.com/xack20/Canvas-LLM) fork. To work on it, clone the fork (its default branch is `main`). The test, channel-scope and browser-adapter steps below apply to the fork only; upstream has none of those files.
 
 The Electron window opens automatically. DevTools opens with it in dev mode.
 

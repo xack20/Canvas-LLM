@@ -111,7 +111,7 @@
       "publish": {
         "provider": "github",
         "owner": "xack20",
-        "repo": "local-lmcanvas"
+        "repo": "Canvas-LLM"
       }
     },
     "nsis": {
