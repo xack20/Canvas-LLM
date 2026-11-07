@@ -4,7 +4,7 @@ A fully local, canvas-based branching AI conversation tool. The Electron app dri
 
 Each conversation is a tree of message nodes on a canvas. Branch from any node to fork the conversation history, or highlight text in a response to branch from that phrase. Canvases and settings persist to `~/.local-lmcanvas/`; each provider's sessions stay in its CLI's own folder.
 
-> **This is a fork.** [xack20/local-lmcanvas](https://github.com/xack20/local-lmcanvas) is based on [max-lee-dev/local-lmcanvas](https://github.com/max-lee-dev/local-lmcanvas) v1.0.4. It adds **browser access over Tailscale**, **context sizes and compaction** for Claude, a per-node Claude model picker, and several canvas and saving improvements. See [What's different in this fork](#whats-different-in-this-fork). All fork work lives on the `local/model-labels` branch.
+> **This is a fork.** [xack20/Canvas-LLM](https://github.com/xack20/Canvas-LLM) is based on [max-lee-dev/local-lmcanvas](https://github.com/max-lee-dev/local-lmcanvas) v1.0.4. It adds **browser access over Tailscale**, **context sizes and compaction** for Claude, a per-node Claude model picker, and several canvas and saving improvements. See [What's different in this fork](#whats-different-in-this-fork). All fork work lives on the `local/model-labels` branch.
 
 ## What's different in this fork
 
