@@ -1,6 +1,7 @@
 import { listKimiModels } from "./agents/kimiModels";
 import { listLocalModels } from "./agents/local/servers";
 import { splitClaudeModels } from "@shared/modelCatalog";
+import { TREE_PLAN_INSTRUCTION } from "@shared/treeOutline";
 import { applyModelChecks, runModelChecks, type Candidate } from "./modelCheck";
 import { createProbe } from "./modelProbes";
 import { readModelChecks, writeModelChecks } from "./storage/modelChecks";
@@ -416,15 +417,19 @@ function registerIpc(): void {
       nodeId,
       canvasId,
       history,
-      prompt,
+      prompt: userPrompt,
       attachments,
       systemPromptOverride,
       nodeSettings,
       planMode: inlinePlanMode,
       chatOnly: inlineChatOnly,
+      treePlan,
       parentSession,
       currentSession,
     } = args;
+    // The tree instruction rides on the prompt, not the system prompt: a resumed session (a page
+    // being taken deeper) and some providers don't apply a new system prompt.
+    const prompt = treePlan ? `${userPrompt}\n\n---\n${TREE_PLAN_INSTRUCTION}` : userPrompt;
     // Every chat ends with exactly one `done` (the renderer settles on it). An attempt that
     // overflowed swallows its own, so a stop at that moment would otherwise leave the reply open.
     let doneSent = false;
@@ -448,7 +453,7 @@ function registerIpc(): void {
         ? `${basePrompt}\n\n${TERSE_NARRATION_INSTRUCTION}`
         : TERSE_NARRATION_INSTRUCTION
       : basePrompt;
-    const builtInPrompt = `${PERSISTENT_PROCESS_INSTRUCTION}\n\n${NEXT_STEPS_INSTRUCTION}`;
+    const builtInPrompt = `${PERSISTENT_PROCESS_INSTRUCTION}\n\n${treePlan ? "" : NEXT_STEPS_INSTRUCTION}`.trimEnd();
     const systemPrompt = withTerse ? `${withTerse}\n\n${builtInPrompt}` : builtInPrompt;
 
     const provider: Provider =

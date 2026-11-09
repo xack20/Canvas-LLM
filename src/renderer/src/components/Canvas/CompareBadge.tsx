@@ -8,6 +8,7 @@ import { useClaudeModelList } from "@/hooks/useClaudeModels";
 import { useCompareStore } from "@/hooks/useCompareStore";
 import { useModelChecksStore } from "@/hooks/useModelChecksStore";
 import { useProviderInfo } from "@/hooks/useProviderInfo";
+import { useTreeStore } from "@/hooks/useTreeStore";
 import { MAX_COMPARE_EXTRA, targetKey, toggleTarget, type CompareTarget } from "@/lib/compareTargets";
 import { BadgePopover } from "./BadgePopover";
 import { ModelOption } from "./ModelOption";
@@ -45,7 +46,10 @@ export function CompareBadge({ nodeId, popoverSide }: Props) {
           ? ownModel
           : undefined,
   });
-  const toggle = (target: CompareTarget): void => setPicked(nodeId, toggleTarget(picked, target));
+  const toggle = (target: CompareTarget): void => {
+    useTreeStore.getState().setArmed(nodeId, false); // a send is either a compare or a tree
+    setPicked(nodeId, toggleTarget(picked, target));
+  };
   const full = picked.length >= MAX_COMPARE_EXTRA;
 
   return (

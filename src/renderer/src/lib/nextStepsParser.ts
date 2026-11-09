@@ -40,18 +40,22 @@ export type StreamerCallbacks = {
   onSuggestions: (suggestions: Suggestion[]) => void;
 };
 
+export type TagStreamerCallbacks = {
+  onText: (text: string) => void;
+  /** The text between the tags, once the closing tag has arrived. */
+  onBlock: (body: string) => void;
+};
+
 /**
- * Stateful tail-buffer parser for streamed assistant text. Strips any trailing
- * `<next-steps>…</next-steps>` block and emits its parsed items via
- * `onSuggestions`. Everything outside the block is forwarded to `onText` as
- * soon as it is provably outside a tag opener.
+ * Stateful tail-buffer parser for streamed assistant text. Strips any
+ * `open…close` block and hands its body to `onBlock`. Everything outside the
+ * block is forwarded to `onText` as soon as it is provably outside a tag opener.
  *
  * Failure modes:
- *  - Malformed lines inside the block: silently skipped.
  *  - Unterminated block on stream end (`flush()`): the buffered content is
  *    restored verbatim as text so we never silently swallow output.
  */
-export function createNextStepsStreamer(cb: StreamerCallbacks) {
+export function createTagStreamer(open: string, close: string, cb: TagStreamerCallbacks) {
   let pending = "";
   let mode: "text" | "block" = "text";
   let blockBuf = "";
@@ -61,15 +65,15 @@ export function createNextStepsStreamer(cb: StreamerCallbacks) {
     pending += delta;
     for (;;) {
       if (mode === "text") {
-        const idx = pending.indexOf(TAG_OPEN);
+        const idx = pending.indexOf(open);
         if (idx >= 0) {
           const safe = pending.slice(0, idx);
           if (safe) cb.onText(safe);
-          pending = pending.slice(idx + TAG_OPEN.length);
+          pending = pending.slice(idx + open.length);
           mode = "block";
           continue;
         }
-        const hold = suffixThatIsPrefixOf(pending, TAG_OPEN);
+        const hold = suffixThatIsPrefixOf(pending, open);
         const flushLen = pending.length - hold;
         if (flushLen > 0) {
           cb.onText(pending.slice(0, flushLen));
@@ -77,17 +81,16 @@ export function createNextStepsStreamer(cb: StreamerCallbacks) {
         }
         return;
       } else {
-        const idx = pending.indexOf(TAG_CLOSE);
+        const idx = pending.indexOf(close);
         if (idx >= 0) {
           blockBuf += pending.slice(0, idx);
-          pending = pending.slice(idx + TAG_CLOSE.length);
-          const suggestions = parseSuggestionLines(blockBuf);
-          if (suggestions.length > 0) cb.onSuggestions(suggestions);
+          pending = pending.slice(idx + close.length);
+          cb.onBlock(blockBuf);
           blockBuf = "";
           mode = "text";
           continue;
         }
-        const hold = suffixThatIsPrefixOf(pending, TAG_CLOSE);
+        const hold = suffixThatIsPrefixOf(pending, close);
         const absorbLen = pending.length - hold;
         if (absorbLen > 0) {
           blockBuf += pending.slice(0, absorbLen);
@@ -106,7 +109,7 @@ export function createNextStepsStreamer(cb: StreamerCallbacks) {
       }
       return;
     }
-    const restored = TAG_OPEN + blockBuf + pending;
+    const restored = open + blockBuf + pending;
     blockBuf = "";
     pending = "";
     mode = "text";
@@ -114,4 +117,15 @@ export function createNextStepsStreamer(cb: StreamerCallbacks) {
   };
 
   return { ingest, flush };
+}
+
+/** The `<next-steps>` block of a reply, parsed into suggestion buttons. */
+export function createNextStepsStreamer(cb: StreamerCallbacks) {
+  return createTagStreamer(TAG_OPEN, TAG_CLOSE, {
+    onText: cb.onText,
+    onBlock: (body) => {
+      const suggestions = parseSuggestionLines(body);
+      if (suggestions.length > 0) cb.onSuggestions(suggestions);
+    },
+  });
 }

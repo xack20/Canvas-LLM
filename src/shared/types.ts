@@ -275,6 +275,10 @@ export type CanvasNode = {
     nodeSettings?: NodeSettings;
     /** Context size after this node's last Claude run (combined, root→here). */
     context?: ContextSnapshot;
+    /** Tree mode: a page that isn't written yet. Its question waits in the prompt box until Write. */
+    planned?: { question: string };
+    /** Tree mode: this node is a page of a tree (so it can go deeper). */
+    treePage?: true;
   };
 };
 

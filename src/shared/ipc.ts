@@ -96,6 +96,8 @@ export type ChatStartArgs = {
   planMode?: boolean;
   /** One-shot chat-only flag (from inline `/chat`). ORed with nodeSettings.chatOnly. */
   chatOnly?: boolean;
+  /** Tree mode: ask for an overview plus a `<tree-outline>` block instead of next steps. */
+  treePlan?: boolean;
   /** Native session belonging to this node's primary parent, when available. */
   parentSession?: ProviderSessionRef;
   /** Native session already owned by this node, when continuing it. */

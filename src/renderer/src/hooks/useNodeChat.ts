@@ -19,7 +19,10 @@ import {
   isUnnamedCanvasName,
   promptToCanvasName,
 } from "@shared/canvasName";
-import { createNextStepsStreamer } from "@/lib/nextStepsParser";
+import { createNextStepsStreamer, createTagStreamer } from "@/lib/nextStepsParser";
+import { growTree } from "@/lib/buildTree";
+import { useTreeStore } from "./useTreeStore";
+import { TREE_CLOSE, TREE_OPEN, parseTreeOutline, type TreeOutline } from "@shared/treeOutline";
 import { contextBaseFor } from "@shared/contextSize";
 
 export function useNodeChat(nodeId: NodeId) {
@@ -40,10 +43,15 @@ export function useNodeChat(nodeId: NodeId) {
       // A compaction is rewriting this node's session; a run now would write it at the same time.
       if (storeApi.getState().compactingNodeIds[nodeId]) return;
 
+      // Tree mode is armed on the badge; it applies to this send only.
+      const treeRun = useTreeStore.getState().take(nodeId);
+      if (treeRun) useTreeStore.getState().setError(nodeId);
       setStreaming(true);
 
       const store = storeApi.getState();
       const nodeBeforeSubmit = store.nodes[nodeId];
+      // Sending a planned page's question (or an edited one) writes it.
+      if (nodeBeforeSubmit?.data.planned) store.patchNode(nodeId, { planned: undefined });
       const shouldNameCanvas =
         isUnnamedCanvasName(store.name) &&
         !!trimmed &&
@@ -184,12 +192,26 @@ export function useNodeChat(nodeId: NodeId) {
           storeApi.getState().setSuggestions(nodeId, asstMsgId, suggestions),
       });
 
+      // In a tree run the `<tree-outline>` block is cut out of the visible text first.
+      let outline = null as TreeOutline | null;
+      const treeStreamer = treeRun
+        ? createTagStreamer(TREE_OPEN, TREE_CLOSE, {
+            onText: nextStepsStreamer.ingest,
+            onBlock: (body) => (outline = parseTreeOutline(body) ?? outline),
+          })
+        : undefined;
+      const ingestText = (text: string) => (treeStreamer ?? nextStepsStreamer).ingest(text);
+      const flushStreams = () => {
+        treeStreamer?.flush();
+        nextStepsStreamer.flush();
+      };
+
       let off: (() => void) | null = null;
       let responseComplete = false;
       const completeVisibleResponse = () => {
         if (responseComplete) return;
         responseComplete = true;
-        nextStepsStreamer.flush();
+        flushStreams();
         flushThinking();
         flushText();
         storeApi.getState().finalizeMessage(nodeId, asstMsgId);
@@ -204,7 +226,7 @@ export function useNodeChat(nodeId: NodeId) {
       const cleanup = () => {
         // Flush any remaining buffered text (e.g. an unterminated <next-steps>
         // block) so we don't silently swallow it.
-        nextStepsStreamer.flush();
+        flushStreams();
         flushThinking();
         flushText();
         if (off) {
@@ -231,7 +253,7 @@ export function useNodeChat(nodeId: NodeId) {
             completeVisibleResponse();
             return;
           case "model_fallback":
-            nextStepsStreamer.flush();
+            flushStreams();
             flushThinking();
             flushText();
             responseComplete = false;
@@ -244,18 +266,18 @@ export function useNodeChat(nodeId: NodeId) {
             return;
           case "text_delta":
             flushThinking();
-            nextStepsStreamer.ingest(ev.text);
+            ingestText(ev.text);
             return;
           case "thinking_delta": {
             // Flush held-back text first so any pending characters land
             // before the new non-text block.
-            nextStepsStreamer.flush();
+            flushStreams();
             flushText();
             queueThinking(ev.text);
             return;
           }
           case "tool_use": {
-            nextStepsStreamer.flush();
+            flushStreams();
             flushText();
             flushThinking();
             const block: ToolUseBlock = {
@@ -279,7 +301,7 @@ export function useNodeChat(nodeId: NodeId) {
             s.setCompacting(nodeId, ev.active);
             return;
           case "compacted": {
-            nextStepsStreamer.flush();
+            flushStreams();
             flushText();
             flushThinking();
             const block: CompactionBlock = {
@@ -307,6 +329,12 @@ export function useNodeChat(nodeId: NodeId) {
               });
             } else {
               s.finalizeMessage(nodeId, asstMsgId);
+              if (treeRun) {
+                flushStreams();
+                flushText();
+                if (outline) growTree(storeApi, nodeId, outline);
+                else useTreeStore.getState().setError(nodeId, "The reply didn't include a usable outline.");
+              }
             }
             cleanup();
             return;
@@ -362,6 +390,7 @@ export function useNodeChat(nodeId: NodeId) {
           nodeSettings,
           planMode: inlinePlanMode || undefined,
           chatOnly: inlineChatOnly || undefined,
+          treePlan: treeRun || undefined,
           parentSession,
           currentSession,
         });
