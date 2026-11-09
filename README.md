@@ -450,6 +450,7 @@ Files are human-readable JSON. Appearance, canvas preferences and keybindings ar
 | `Enter` | submit the prompt in the focused input (`Shift+Enter` for a new line; `Esc` cancels editing a sent prompt) |
 | `Enter` with text highlighted in a response | branch from that text |
 | `⌘+B` / `Ctrl+B` | add a blank child node to the right of the selected node |
+| Arrow keys | pan the canvas (hold to keep moving, `Shift` for faster); ignored while typing or in a menu or list |
 | `Backspace` / `Delete` | delete the selected node(s), after confirming |
 | `⌘+F` / `Ctrl+F` | search |
 | `⌘+K` / `Ctrl+K` | command palette |

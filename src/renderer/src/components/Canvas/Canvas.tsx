@@ -40,6 +40,7 @@ import {
 } from "@/lib/groupSummary";
 import { useGroupSummaries } from "@/hooks/useGroupSummaries";
 import { useWidthFitOnOpen } from "@/hooks/useWidthFitOnOpen";
+import { useArrowKeyPan } from "@/hooks/useArrowKeyPan";
 import type { ChatData } from "@shared/types";
 
 const nodeTypes = { custom: CustomNode };
@@ -60,6 +61,7 @@ const edgeStyle = {
 
 function CanvasInner() {
   useWidthFitOnOpen();
+  useArrowKeyPan();
   const nodesById = useCanvasStore((s) => s.nodes);
   const edgesState = useCanvasStore((s) => s.edges);
   const canvasId = useCanvasStore((s) => s.canvasId);
