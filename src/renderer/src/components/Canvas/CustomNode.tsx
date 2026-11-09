@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { type NodeProps } from "@xyflow/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { GitMerge, PanelRightOpen, Plus } from "lucide-react";
@@ -18,9 +18,12 @@ import { BranchBadge } from "./BranchBadge";
 import { PlanBadge } from "./PlanBadge";
 import { ApprovalBadge } from "./ApprovalBadge";
 import { CompareBadge } from "./CompareBadge";
+import { TreeBadge } from "./TreeBadge";
+import { TreeFooter } from "./TreeFooter";
 import { OnboardingTitle } from "./OnboardingTitle";
 import { useNodeChat } from "@/hooks/useNodeChat";
 import { useCompareSubmit } from "@/hooks/useCompareSubmit";
+import { registerPageWriter, useTreeStore } from "@/hooks/useTreeStore";
 import type { CanvasNode, ImageBlock } from "@shared/types";
 import type { Attachment } from "@shared/ipc";
 import { NodeResponse } from "./NodeResponse";
@@ -83,6 +86,13 @@ function CustomNodeImpl(props: NodeProps) {
   const userMessage = messages.find((m) => m.role === "user");
   const assistantMessage = messages.find((m) => m.role === "assistant");
   const hasSubmitted = Boolean(userMessage);
+  // Tree mode: a page whose question is planned but not sent yet.
+  const planned = nodeData.planned;
+  const plannedQuestion = planned?.question;
+  useEffect(() => {
+    if (!plannedQuestion) return;
+    return registerPageWriter(id, () => void submit(plannedQuestion));
+  }, [id, plannedQuestion, submit]);
   // A prompt can't be edited (which clears the node) while a compaction rewrites its session.
   const canEditPrompt = hasSubmitted && !compacting;
 
@@ -259,7 +269,8 @@ function CustomNodeImpl(props: NodeProps) {
           <FastBadge nodeId={id} />
           <PlanBadge nodeId={id} />
           <ApprovalBadge nodeId={id} />
-          {!hasSubmitted && <CompareBadge nodeId={id} />}
+          {!hasSubmitted && !planned && <CompareBadge nodeId={id} />}
+          {!hasSubmitted && !planned && <TreeBadge nodeId={id} />}
           {isMergeNode && (
             <span
               className="flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
@@ -311,6 +322,9 @@ function CustomNodeImpl(props: NodeProps) {
         </button>
 
         <div className="select-text nodrag -ml-[5px] pl-[5px]">
+          {planned && (
+            <p className="mb-2 text-[13px] leading-snug text-muted-foreground">{planned.question}</p>
+          )}
           {!hasSubmitted && (
             <NodePromptInput
               ref={promptInputRef}
@@ -318,7 +332,7 @@ function CustomNodeImpl(props: NodeProps) {
               onSubmit={submit}
               onStop={stop}
               streaming={streaming}
-              autoFocus={!pendingAutoSubmit}
+              autoFocus={!pendingAutoSubmit && !planned}
             />
           )}
           {nodeTitle && (
@@ -382,6 +396,14 @@ function CustomNodeImpl(props: NodeProps) {
             </div>
           )}
           {askUserRequest && <AskUserPrompt request={askUserRequest} />}
+          <TreeFooter
+            nodeId={id}
+            onRetry={() => {
+              useTreeStore.getState().setError(id);
+              useTreeStore.getState().setArmed(id, true);
+              void promptEdit.commit(userText, userAttachments);
+            }}
+          />
           {compactError && (
             <div className="mt-2 flex items-start gap-1.5 text-[10px] text-red-600 dark:text-red-400">
               <span className="flex-1">{compactError}</span>
