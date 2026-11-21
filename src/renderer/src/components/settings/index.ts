@@ -8,3 +8,4 @@ export { KeybindingsSetting } from "./KeybindingsSetting";
 export { KeybindingsPage } from "./KeybindingsPage";
 export { FinishSoundSetting } from "./FinishSoundSetting";
 export { ModelChecksSection } from "./ModelChecksSection";
+export { SystemPromptSetting } from "./SystemPromptSetting";

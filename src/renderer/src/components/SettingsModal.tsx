@@ -18,6 +18,7 @@ import {
   KeybindingsSetting,
   KeybindingsPage,
   FinishSoundSetting,
+  SystemPromptSetting,
   Toggle,
 } from "./settings";
 import { BrowserAccessSection } from "./settings/BrowserAccessSection";
@@ -201,6 +202,10 @@ export function SettingsModal({ open, onClose }: Props) {
                     label="Terse tool narration"
                     description="Replace verbose play-by-play between tool calls with a single 1-2 sentence summary per batch."
                     icon={<MessageSquareDashed className="w-4 h-4" />}
+                  />
+                  <SystemPromptSetting
+                    value={settings.systemPrompt ?? ""}
+                    onChange={(systemPrompt) => setSettings((s) => ({ ...s, systemPrompt }))}
                   />
                   <KeybindingsSetting onOpen={() => setView("keybindings")} />
                   <div className="flex items-center justify-between gap-2 rounded-md px-1 py-1">
