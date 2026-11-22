@@ -45,8 +45,8 @@ async function probeClaude(model: string, binPath: string | undefined, signal: A
   return { ok: false as const, error: "no answer" };
 }
 
-/** Codex and Kimi: a chat through the same adapter real nodes use. */
-async function probeAdapter(provider: "codex" | "kimi", model: string, binPath: string | undefined, signal: AbortSignal) {
+/** Codex, Kimi and Antigravity: a chat through the same adapter real nodes use. */
+async function probeAdapter(provider: "codex" | "kimi" | "antigravity", model: string, binPath: string | undefined, signal: AbortSignal) {
   let text = "";
   let error = "";
   let failed = false;
@@ -72,7 +72,7 @@ async function probeAdapter(provider: "codex" | "kimi", model: string, binPath: 
 export function createProbe(binPaths: Partial<Record<string, string | undefined>>): Probe {
   return async ({ provider, model }, signal) => {
     if (provider === "claude") return probeClaude(model, binPaths.claude, signal);
-    if (provider === "codex" || provider === "kimi") return probeAdapter(provider, model, binPaths[provider], signal);
+    if (provider === "codex" || provider === "kimi" || provider === "antigravity") return probeAdapter(provider, model, binPaths[provider], signal);
     return { ok: false, error: `${provider} models can't be checked` };
   };
 }

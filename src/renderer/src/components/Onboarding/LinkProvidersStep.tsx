@@ -15,6 +15,7 @@ export function LinkProvidersStep({ onContinue, onSkip }: Props) {
     codex: false,
     cursor: false,
     kimi: false,
+    antigravity: false,
     local: false,
   });
 

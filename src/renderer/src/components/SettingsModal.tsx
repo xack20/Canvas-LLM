@@ -3,6 +3,7 @@ import { ChevronDown, MessageSquareDashed, Sparkles, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type {
   AppSettings,
+  AntigravityModelInfo,
   CodexRuntimeInfo,
   KimiModelInfo,
   Provider,
@@ -40,10 +41,15 @@ export function SettingsModal({ open, onClose }: Props) {
   const [view, setView] = useState<View>("main");
   const [codexRuntime, setCodexRuntime] = useState<CodexRuntimeInfo | null>(null);
   const [kimiModels, setKimiModels] = useState<KimiModelInfo[]>([]);
+  const [antigravityModels, setAntigravityModels] = useState<AntigravityModelInfo[]>([]);
 
   useEffect(() => {
     if (!open) return;
     void window.api.settings.read().then(setSettings);
+    void window.api.providers
+      .antigravityModels()
+      .then(setAntigravityModels)
+      .catch(() => setAntigravityModels([]));
     void window.api.providers
       .codexRuntime()
       .then(setCodexRuntime)
@@ -309,14 +315,27 @@ export function SettingsModal({ open, onClose }: Props) {
                                         ? "auto"
                                         : provider === "kimi"
                                         ? "Kimi default"
+                                        : provider === "antigravity"
+                                        ? "Antigravity default"
                                         : "claude-fable-5"
                                     }
                                     {...(provider === "codex"
                                       ? { list: "codex-models" }
                                       : provider === "kimi"
                                       ? { list: "kimi-models" }
+                                      : provider === "antigravity"
+                                      ? { list: "antigravity-models" }
                                       : {})}
                                   />
+                                  )}
+                                  {provider === "antigravity" && antigravityModels.length > 0 && (
+                                    <datalist id="antigravity-models">
+                                      {antigravityModels.map((model) => (
+                                        <option key={model.id} value={model.id}>
+                                          {model.displayName}
+                                        </option>
+                                      ))}
+                                    </datalist>
                                   )}
                                   {provider === "kimi" && kimiModels.length > 0 && (
                                     <datalist id="kimi-models">

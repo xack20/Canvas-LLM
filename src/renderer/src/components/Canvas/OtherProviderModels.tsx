@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import type { CodexModelInfo, KimiModelInfo, LocalModelInfo, NodeId, NodeSettings, Provider } from "@shared/types";
+import type { AntigravityModelInfo, CodexModelInfo, KimiModelInfo, LocalModelInfo, NodeId, NodeSettings, Provider } from "@shared/types";
 import { isNewSinceCheck, withoutFailed } from "@shared/modelCatalog";
 import { useCanvasStore } from "@/hooks/useCanvasStore";
 import { useModelChecksStore } from "@/hooks/useModelChecksStore";
@@ -13,7 +13,7 @@ type Props = { nodeId: NodeId; close: () => void };
 const RESET: Partial<NodeSettings> = { reasoningEffort: undefined, serviceTier: undefined };
 
 /**
- * The Codex, Cursor, Kimi and Local sections of the node model picker. Picking a model sets the node's
+ * The Codex, Cursor, Kimi, Antigravity and Local sections of the node model picker. Picking a model sets the node's
  * provider and model together. A section is hidden when its CLI has nothing to offer (not
  * installed, or no models in its config). Mounted with the picker, so lists are read on open.
  */
@@ -53,6 +53,10 @@ export function OtherProviderModels({ nodeId, close }: Props) {
       <KimiSection
         activeModel={provider === "kimi" ? nodeModel("kimi") : undefined}
         onSelect={(model) => pick({ provider: "kimi", model, ...RESET })}
+      />
+      <AntigravitySection
+        activeModel={provider === "antigravity" ? nodeModel("antigravity") : undefined}
+        onSelect={(model) => pick({ provider: "antigravity", model, ...RESET })}
       />
       <LocalSection
         activeModel={provider === "local" ? nodeModel("local") : undefined}
@@ -171,6 +175,39 @@ function KimiSection({
       <OlderModels count={older.length} defaultOpen={older.some((m) => m.id === activeModel)}>
         {older.map(row)}
       </OlderModels>
+    </Section>
+  );
+}
+
+/** The models `agy` offers this account; hidden when it isn't installed or signed in. */
+function AntigravitySection({
+  activeModel,
+  onSelect,
+}: {
+  activeModel: string | undefined;
+  onSelect: (model: string) => void;
+}) {
+  const [models, setModels] = useState<AntigravityModelInfo[]>([]);
+  useEffect(() => {
+    void window.api.providers
+      .antigravityModels()
+      .then(setModels)
+      .catch(() => setModels([]));
+  }, []);
+  const checks = useModelChecksStore((s) => s.checks);
+  if (models.length === 0) return null;
+  return (
+    <Section provider="antigravity" title="Antigravity">
+      {withoutFailed(models, "antigravity", checks, (m) => m.id).map((model) => (
+        <ModelOption
+          key={model.id}
+          provider="antigravity"
+          active={activeModel === model.id}
+          title={model.displayName}
+          subtitle={`${model.id}${isNewSinceCheck(checks, "antigravity", model.id) ? " · not checked" : ""}`}
+          onSelect={() => onSelect(model.id)}
+        />
+      ))}
     </Section>
   );
 }

@@ -32,6 +32,12 @@ export const PROVIDER_INFO: Record<Provider, ProviderInfo> = {
     tagline: "Moonshot AI. Sign in with Kimi Code.",
     installUrl: "https://moonshotai.github.io/kimi-code/",
   },
+  antigravity: {
+    id: "antigravity",
+    name: "Antigravity",
+    tagline: "Google. Gemini and more; sign in with your Google account.",
+    installUrl: "https://antigravity.google/download#antigravity-cli",
+  },
   local: {
     id: "local",
     name: "Local",

@@ -1,3 +1,4 @@
+import { listAntigravityModels } from "./agents/antigravityModels";
 import { listKimiModels } from "./agents/kimiModels";
 import { listLocalModels } from "./agents/local/servers";
 import { splitClaudeModels } from "@shared/modelCatalog";
@@ -464,8 +465,9 @@ function registerIpc(): void {
       (provider === "claude" ? settings.claudeBinPath : undefined);
     const requestedEffort = nodeSettings?.reasoningEffort ?? providerCfg?.reasoningEffort;
     const serviceTier = nodeSettings?.serviceTier ?? providerCfg?.serviceTier;
+    // Antigravity can't fork a session, so a branch off its node replays the history in a session of its own.
     const compatibleParentSession =
-      parentSession?.provider === provider ? parentSession : undefined;
+      parentSession?.provider === provider && provider !== "antigravity" ? parentSession : undefined;
     const compatibleCurrentSession =
       currentSession?.provider === provider ? currentSession : undefined;
     let agentPrompt =
@@ -884,6 +886,11 @@ function registerIpc(): void {
   }, "shared");
 
   api.handle("providers:kimiModels", async () => listKimiModels(), "shared");
+  api.handle(
+    "providers:antigravityModels",
+    async () => listAntigravityModels((await readSettings()).providers?.antigravity?.binPath || undefined),
+    "shared",
+  );
   api.handle("providers:localModels", async () => listLocalModels(), "shared");
 
   api.handle("providers:modelChecks", async () => readModelChecks(), "shared");
@@ -908,10 +915,19 @@ function registerIpc(): void {
           ...(await listKimiModels())
             .filter((m) => m.latest)
             .map((m) => ({ provider: "kimi" as const, model: m.id })),
+          ...(await listAntigravityModels(binOf("antigravity"))).map((m) => ({
+            provider: "antigravity" as const,
+            model: m.id,
+          })),
         ];
         const results = await runModelChecks(
           candidates,
-          createProbe({ claude: claudeBinPathOf(settings), codex: binOf("codex"), kimi: binOf("kimi") }),
+          createProbe({
+            claude: claudeBinPathOf(settings),
+            codex: binOf("codex"),
+            kimi: binOf("kimi"),
+            antigravity: binOf("antigravity"),
+          }),
         );
         const checks = applyModelChecks(await readModelChecks(), results, Date.now());
         await writeModelChecks(checks);

@@ -16,9 +16,32 @@ export function ProviderLogo({ provider, size = 10, className }: Props) {
       return <CursorLogo size={size} className={className} />;
     case "kimi":
       return <KimiLogo size={size} className={className} />;
+    case "antigravity":
+      return <AntigravityLogo size={size} className={className} />;
     case "local":
       return <LocalLogo size={size} className={className} />;
   }
+}
+
+// A plain "A" mark, not Google's logo.
+function AntigravityLogo({ size = 10, className }: { size?: number; className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      className={className ?? "opacity-90"}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 21L12 3l8 18M7.5 14h9" />
+    </svg>
+  );
 }
 
 // A plain chip mark: the model runs on this machine.

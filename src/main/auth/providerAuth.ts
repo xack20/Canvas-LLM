@@ -4,12 +4,14 @@ import type { ProviderAuthStatus } from "@shared/ipc";
 import { shellEnv } from "../shellPath";
 import { resolveCommandLine } from "../commandLine";
 import { listLocalModels } from "../agents/local/servers";
+import { listAntigravityModels } from "../agents/antigravityModels";
 
 const DEFAULT_BIN: Record<Provider, string> = {
   claude: "claude",
   codex: "codex",
   cursor: "cursor-agent",
   kimi: "kimi",
+  antigravity: "agy",
   local: "",
 };
 
@@ -103,6 +105,8 @@ export async function getProviderAuthStatus(
       return probeCursor(bin, resolved);
     case "kimi":
       return probeKimi(bin, resolved);
+    case "antigravity":
+      return probeAntigravity(bin, resolved);
     case "local":
       return probeLocal();
   }
@@ -214,6 +218,28 @@ async function probeKimi(bin: string, binPath: string | null): Promise<ProviderA
   };
 }
 
+// `agy` has no "login status" either: a signed-in install can open a session, which lists its models.
+async function probeAntigravity(bin: string, binPath: string | null): Promise<ProviderAuthStatus> {
+  const r = await probe(bin, ["--version"]);
+  if (r.enoent) {
+    return {
+      provider: "antigravity",
+      installed: false,
+      authenticated: false,
+      binPath,
+      detail: r.spawnError ?? "agy binary not found",
+    };
+  }
+  const models = await listAntigravityModels(bin);
+  return {
+    provider: "antigravity",
+    installed: true,
+    authenticated: models.length > 0,
+    binPath,
+    detail: r.stdout.trim() || undefined,
+  };
+}
+
 // There is nothing to sign in to: the provider is ready when a local server has a model.
 async function probeLocal(): Promise<ProviderAuthStatus> {
   const models = await listLocalModels();
@@ -226,13 +252,16 @@ async function probeLocal(): Promise<ProviderAuthStatus> {
   };
 }
 
+/** `agy` has no login subcommand: starting it signs you in on first run. */
+const loginArgs = (provider: Provider): string => (provider === "antigravity" ? "" : " login");
+
 export async function openLoginTerminal(
   provider: Provider,
   binPath?: string
 ): Promise<void> {
   const bin = binPath || DEFAULT_BIN[provider];
   if (process.platform === "win32") {
-    await openWindowsLoginConsole(bin);
+    await openWindowsLoginConsole(bin, loginArgs(provider));
     return;
   }
   if (process.platform !== "darwin") {
@@ -242,7 +271,7 @@ export async function openLoginTerminal(
     throw new Error(`Signing in from LMCanvas isn't supported on ${process.platform}. Run "${bin} login" in a terminal.`);
   }
   // escape double quotes for the embedded AppleScript string
-  const cmd = `${bin} login`.replace(/"/g, '\\"');
+  const cmd = `${bin}${loginArgs(provider)}`.replace(/"/g, '\\"');
   const script = `tell application "Terminal" to do script "${cmd}"`;
   const env = await shellEnv();
   await new Promise<void>((resolve, reject) => {
@@ -255,13 +284,13 @@ export async function openLoginTerminal(
   });
 }
 
-async function openWindowsLoginConsole(bin: string): Promise<void> {
+async function openWindowsLoginConsole(bin: string, args: string): Promise<void> {
   const env = await shellEnv();
   const quotedBin = `"${bin.replace(/"/g, "")}"`;
   await new Promise<void>((resolve, reject) => {
     const proc = spawn(
       env.ComSpec || "cmd.exe",
-      ["/d", "/c", "start", '"LMCanvas sign-in"', "cmd.exe", "/k", `"${quotedBin} login"`],
+      ["/d", "/c", "start", '"LMCanvas sign-in"', "cmd.exe", "/k", `"${quotedBin}${args}"`],
       { stdio: "ignore", env, windowsVerbatimArguments: true, windowsHide: true },
     );
     proc.on("error", reject);

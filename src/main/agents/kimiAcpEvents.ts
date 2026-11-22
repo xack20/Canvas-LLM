@@ -44,8 +44,16 @@ export function acpUpdateEvents(update: unknown): RunnerEvent[] {
     }
     case "tool_call": {
       if (typeof u.toolCallId !== "string") return [];
-      const name = typeof u.title === "string" && u.title ? u.title : typeof u.kind === "string" ? u.kind : "tool";
-      return [{ kind: "tool_use", toolUseId: u.toolCallId, name, input: {} }];
+      // Kimi names a call by its title and sends no input; Antigravity also sends `name` and `rawInput`.
+      const name =
+        typeof u.name === "string" && u.name
+          ? u.name
+          : typeof u.title === "string" && u.title
+            ? u.title
+            : typeof u.kind === "string"
+              ? u.kind
+              : "tool";
+      return [{ kind: "tool_use", toolUseId: u.toolCallId, name, input: u.rawInput && typeof u.rawInput === "object" ? u.rawInput : {} }];
     }
     case "tool_call_update": {
       if (typeof u.toolCallId !== "string" || (u.status !== "completed" && u.status !== "failed")) return [];
@@ -62,22 +70,26 @@ export function acpUpdateEvents(update: unknown): RunnerEvent[] {
 }
 
 type PermissionParams = {
-  toolCall?: { title?: string; content?: unknown };
+  toolCall?: { title?: string; content?: unknown; rawInput?: { CommandLine?: unknown } };
   options?: { optionId?: string; kind?: string }[];
 };
 
-/** The approval prompt for one `session/request_permission`: the same three choices Claude's prompt has. */
-export function permissionQuestion(params: unknown): AskUserQuestion {
+/**
+ * The approval prompt for one `session/request_permission`: the same three choices Claude's prompt has.
+ * `agent` is the name shown to the user; Antigravity sends the command in `rawInput` rather than `content`.
+ */
+export function permissionQuestion(params: unknown, agent = "Kimi"): AskUserQuestion {
   const p = (params ?? {}) as PermissionParams;
   const title = p.toolCall?.title || "a tool";
-  const detail = textOf(p.toolCall?.content).replace(APPROVAL_PREFIX, "");
+  const command = p.toolCall?.rawInput?.CommandLine;
+  const detail = textOf(p.toolCall?.content).replace(APPROVAL_PREFIX, "") || (typeof command === "string" ? command : "");
   const offered = new Set((p.options ?? []).map((o) => o.kind));
   const options = [
     { label: ALLOW_ONCE, description: "Run this one call.", preview: detail.slice(0, PREVIEW_MAX) || undefined },
-    { label: ALWAYS_ALLOW, description: "Skip this question for the rest of this Kimi session." },
-    { label: DENY, description: "Don't run it; Kimi is told it was rejected." },
+    { label: ALWAYS_ALLOW, description: `Skip this question for the rest of this ${agent} session.` },
+    { label: DENY, description: `Don't run it; ${agent} is told it was rejected.` },
   ].filter((option) => KINDS_FOR[option.label].some((kind) => offered.has(kind)));
-  return { id: "decision", header: "Approval", question: `Allow Kimi to use ${title}?`, multiSelect: false, options };
+  return { id: "decision", header: "Approval", question: `Allow ${agent} to use ${title}?`, multiSelect: false, options };
 }
 
 /** The `session/request_permission` result for the user's answer; anything unclear cancels the call. */

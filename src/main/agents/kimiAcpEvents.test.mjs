@@ -39,6 +39,13 @@ describe("acpUpdateEvents", () => {
     ]);
   });
 
+  test("Antigravity's tool call keeps its name and input", () => {
+    const rawInput = { CommandLine: "ls", toolSummary: "Run ls command" };
+    expect(acpUpdateEvents({ sessionUpdate: "tool_call", toolCallId: "c1", name: "run_command", title: "ls", kind: "execute", rawInput })).toEqual([
+      { kind: "tool_use", toolUseId: "c1", name: "run_command", input: rawInput },
+    ]);
+  });
+
   test("other updates and junk make no events", () => {
     for (const update of [{ sessionUpdate: "available_commands_update" }, { sessionUpdate: "session_info_update" }, null, "x"]) {
       expect(acpUpdateEvents(update)).toEqual([]);
@@ -52,6 +59,23 @@ describe("permissionQuestion", () => {
     expect(q).toMatchObject({ id: "decision", header: "Approval", question: "Allow Kimi to use Bash?" });
     expect(q.options.map((o) => o.label)).toEqual(["Allow once", "Always allow", "Deny"]);
     expect(q.options[0].preview).toBe("Running: rm -rf build");
+  });
+
+  test("names the agent and takes the command preview from rawInput (Antigravity)", () => {
+    const q = permissionQuestion(
+      {
+        toolCall: { title: "ls", rawInput: { CommandLine: "ls -la" } },
+        options: [
+          { optionId: "allow", kind: "allow_once" },
+          { optionId: "deny", kind: "reject_once" },
+        ],
+      },
+      "Antigravity",
+    );
+    expect(q.question).toBe("Allow Antigravity to use ls?");
+    expect(q.options.map((o) => o.label)).toEqual(["Allow once", "Deny"]);
+    expect(q.options[0].preview).toBe("ls -la");
+    expect(q.options[1].description).toContain("Antigravity");
   });
 
   test("offers only what Kimi offered", () => {
