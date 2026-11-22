@@ -157,6 +157,14 @@ export type CodexRuntimeInfo = {
   protocolVersion: 2;
 };
 
+/** A model `agy` offers. `id` is what `session/set_model` takes. */
+export type AntigravityModelInfo = {
+  id: string;
+  displayName: string;
+  /** The account's default model and its effort variants. The rest sit under "Other models". */
+  latest: boolean;
+};
+
 /** A model alias from the user's Kimi config. `id` is what `kimi -m` takes. */
 export type KimiModelInfo = {
   id: string;
@@ -297,9 +305,9 @@ export type CanvasEdge = {
   sourceYOffset?: number;
 };
 
-export type Provider = "claude" | "codex" | "cursor" | "kimi" | "local";
+export type Provider = "claude" | "codex" | "cursor" | "kimi" | "antigravity" | "local";
 
-export const PROVIDERS: readonly Provider[] = ["claude", "codex", "cursor", "kimi", "local"] as const;
+export const PROVIDERS: readonly Provider[] = ["claude", "codex", "cursor", "kimi", "antigravity", "local"] as const;
 
 export type ProviderConfig = {
   /** Override the default binary name. */

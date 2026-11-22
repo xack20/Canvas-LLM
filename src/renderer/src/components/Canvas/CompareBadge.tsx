@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { GitCompare } from "lucide-react";
-import type { CodexModelInfo, KimiModelInfo, LocalModelInfo, NodeId, Provider } from "@shared/types";
+import type { AntigravityModelInfo, CodexModelInfo, KimiModelInfo, LocalModelInfo, NodeId, Provider } from "@shared/types";
 import { findClaudeModel } from "@shared/claudeModels";
-import { splitClaudeModels, withoutFailed } from "@shared/modelCatalog";
+import { splitClaudeModels, splitCodexModels, withoutFailed } from "@shared/modelCatalog";
 import { useCanvasStore } from "@/hooks/useCanvasStore";
 import { useClaudeModelList } from "@/hooks/useClaudeModels";
 import { useCompareStore } from "@/hooks/useCompareStore";
@@ -96,8 +96,10 @@ function CompareModelRows({ ownKey, picked, full, onToggle }: RowsProps) {
   const claude = useClaudeModelList()?.models;
   const [codex, setCodex] = useState<CodexModelInfo[]>([]);
   const [kimi, setKimi] = useState<KimiModelInfo[]>([]);
+  const [antigravity, setAntigravity] = useState<AntigravityModelInfo[]>([]);
   const [local, setLocal] = useState<LocalModelInfo[]>([]);
   useEffect(() => {
+    void window.api.providers.antigravityModels().then(setAntigravity).catch(() => setAntigravity([]));
     void window.api.providers.localModels().then(setLocal).catch(() => setLocal([]));
     void loadChecks();
     void window.api.providers.codexRuntime().then((r) => setCodex(r.models)).catch(() => setCodex([]));
@@ -107,7 +109,7 @@ function CompareModelRows({ ownKey, picked, full, onToggle }: RowsProps) {
   const groups = useMemo(() => {
     const claudeLatest = withoutFailed(splitClaudeModels(claude ?? []).latest, "claude", checks, (m) => m.value);
     const claudeTargets = claudeLatest.map((m) => ({ provider: "claude" as const, model: m.value, label: m.displayName }));
-    const codexTargets = withoutFailed(codex, "codex", checks, (m) => m.id).map((m) => ({
+    const codexTargets = withoutFailed(splitCodexModels(codex).latest, "codex", checks, (m) => m.id).map((m) => ({
       provider: "codex" as const,
       model: m.id,
       label: m.displayName,
@@ -118,14 +120,25 @@ function CompareModelRows({ ownKey, picked, full, onToggle }: RowsProps) {
       checks,
       (m) => m.id,
     ).map((m) => ({ provider: "kimi" as const, model: m.id, label: m.displayName }));
+    const antigravityTargets = withoutFailed(
+      antigravity.filter((m) => m.latest),
+      "antigravity",
+      checks,
+      (m) => m.id,
+    ).map((m) => ({
+      provider: "antigravity" as const,
+      model: m.id,
+      label: m.displayName,
+    }));
     const localTargets = local.map((m) => ({ provider: "local" as const, model: m.id, label: m.displayName }));
     return [
       { provider: "claude" as Provider, title: "Claude", targets: claudeTargets },
       { provider: "codex" as Provider, title: "Codex", targets: codexTargets },
       { provider: "kimi" as Provider, title: "Kimi", targets: kimiTargets },
+      { provider: "antigravity" as Provider, title: "Antigravity", targets: antigravityTargets },
       { provider: "local" as Provider, title: "Local", targets: localTargets },
     ];
-  }, [claude, codex, kimi, local, checks]);
+  }, [claude, codex, kimi, antigravity, local, checks]);
 
   const pickedKeys = new Set(picked.map(targetKey));
   return (

@@ -1,6 +1,7 @@
 import type { Provider } from "@shared/types";
 import { runClaude } from "../claude/runner";
 import { approvalRefusal } from "./approvalSupport";
+import { runAntigravity } from "./antigravityAcp";
 import { runCodex } from "./codex";
 import { runCursor } from "./cursor";
 import { runKimi } from "./kimi";
@@ -30,6 +31,8 @@ export async function runAgent(
       return runCursor(prompt, opts);
     case "kimi":
       return runKimi(prompt, opts);
+    case "antigravity":
+      return runAntigravity(prompt, opts);
     case "local":
       return runLocal(prompt, opts);
   }

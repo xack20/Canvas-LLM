@@ -11,6 +11,7 @@ import type {
   ToolUseBlock,
   UsageSummary,
 } from "./types";
+import { PROVIDERS } from "./types";
 
 /** The node and its conversation ancestors (first parents), root first. */
 function chainForNode(nodeId: NodeId, nodesById: Record<NodeId, CanvasNode>): CanvasNode[] {
@@ -189,7 +190,7 @@ export function migrateMessage(raw: unknown): Message | null {
 }
 
 function isProvider(value: unknown): value is Provider {
-  return value === "claude" || value === "codex" || value === "cursor" || value === "kimi" || value === "local";
+  return typeof value === "string" && (PROVIDERS as readonly string[]).includes(value);
 }
 
 function isErrorCode(value: unknown): value is ErrorCode {

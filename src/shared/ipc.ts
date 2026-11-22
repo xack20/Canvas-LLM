@@ -1,6 +1,7 @@
 import type { ShareRefusal } from "./canvasShare";
 import type { AliasPlan, OrganizePlanRequest } from "./canvasOrganize";
 import type {
+  AntigravityModelInfo,
   AppSettings,
   Canvas,
   CanvasSummary,
@@ -325,6 +326,8 @@ export type LmcApi = {
     claudeModels(): Promise<ClaudeModelList>;
     /** Model aliases from the user's Kimi config. */
     kimiModels(): Promise<KimiModelInfo[]>;
+    /** Models the installed Antigravity CLI (`agy`) offers this account. */
+    antigravityModels(): Promise<AntigravityModelInfo[]>;
     localModels(): Promise<LocalModelInfo[]>;
     /** Saved results of "Check my models". */
     modelChecks(): Promise<ModelChecks>;

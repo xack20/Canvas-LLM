@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
-import type { CodexModelInfo, KimiModelInfo, LocalModelInfo, NodeId, NodeSettings, Provider } from "@shared/types";
-import { isNewSinceCheck, withoutFailed } from "@shared/modelCatalog";
+import type { AntigravityModelInfo, CodexModelInfo, KimiModelInfo, LocalModelInfo, NodeId, NodeSettings, Provider } from "@shared/types";
+import { isNewSinceCheck, splitCodexModels, withoutFailed } from "@shared/modelCatalog";
 import { useCanvasStore } from "@/hooks/useCanvasStore";
 import { useModelChecksStore } from "@/hooks/useModelChecksStore";
 import { OlderModels } from "./OlderModels";
@@ -13,7 +13,7 @@ type Props = { nodeId: NodeId; close: () => void };
 const RESET: Partial<NodeSettings> = { reasoningEffort: undefined, serviceTier: undefined };
 
 /**
- * The Codex, Cursor, Kimi and Local sections of the node model picker. Picking a model sets the node's
+ * The Codex, Cursor, Kimi, Antigravity and Local sections of the node model picker. Picking a model sets the node's
  * provider and model together. A section is hidden when its CLI has nothing to offer (not
  * installed, or no models in its config). Mounted with the picker, so lists are read on open.
  */
@@ -54,6 +54,10 @@ export function OtherProviderModels({ nodeId, close }: Props) {
         activeModel={provider === "kimi" ? nodeModel("kimi") : undefined}
         onSelect={(model) => pick({ provider: "kimi", model, ...RESET })}
       />
+      <AntigravitySection
+        activeModel={provider === "antigravity" ? nodeModel("antigravity") : undefined}
+        onSelect={(model) => pick({ provider: "antigravity", model, ...RESET })}
+      />
       <LocalSection
         activeModel={provider === "local" ? nodeModel("local") : undefined}
         onSelect={(model) => pick({ provider: "local", model, ...RESET })}
@@ -93,21 +97,26 @@ function CodexSection({
   }, []);
   const checks = useModelChecksStore((s) => s.checks);
   if (!runtime) return null;
-  const models = withoutFailed(runtime.models, "codex", checks, (m) => m.id);
-  if (models.length === 0) return null;
+  const { latest, older } = splitCodexModels(runtime.models);
+  const current = withoutFailed(latest, "codex", checks, (m) => m.id);
+  if (current.length === 0 && older.length === 0) return null;
   const active = activeModel ?? runtime.defaultModelId;
+  const row = (model: CodexModelInfo) => (
+    <ModelOption
+      key={model.id}
+      provider="codex"
+      active={active === model.id}
+      title={model.displayName}
+      subtitle={`${model.description}${isNewSinceCheck(checks, "codex", model.id) ? " · not checked" : ""}`}
+      onSelect={() => onSelect(model)}
+    />
+  );
   return (
     <Section provider="codex" title="Codex">
-      {models.map((model) => (
-        <ModelOption
-          key={model.id}
-          provider="codex"
-          active={active === model.id}
-          title={model.displayName}
-          subtitle={`${model.description}${isNewSinceCheck(checks, "codex", model.id) ? " · not checked" : ""}`}
-          onSelect={() => onSelect(model)}
-        />
-      ))}
+      {current.map(row)}
+      <OlderModels count={older.length} defaultOpen={older.some((m) => m.id === active)}>
+        {older.map(row)}
+      </OlderModels>
     </Section>
   );
 }
@@ -170,6 +179,50 @@ function KimiSection({
       {latest.map(row)}
       <OlderModels count={older.length} defaultOpen={older.some((m) => m.id === activeModel)}>
         {older.map(row)}
+      </OlderModels>
+    </Section>
+  );
+}
+
+/** The models `agy` offers this account; hidden when it isn't installed or signed in. */
+function AntigravitySection({
+  activeModel,
+  onSelect,
+}: {
+  activeModel: string | undefined;
+  onSelect: (model: string) => void;
+}) {
+  const [models, setModels] = useState<AntigravityModelInfo[]>([]);
+  useEffect(() => {
+    void window.api.providers
+      .antigravityModels()
+      .then(setModels)
+      .catch(() => setModels([]));
+  }, []);
+  const checks = useModelChecksStore((s) => s.checks);
+  if (models.length === 0) return null;
+  const latest = withoutFailed(
+    models.filter((m) => m.latest),
+    "antigravity",
+    checks,
+    (m) => m.id,
+  );
+  const other = models.filter((m) => !m.latest);
+  const row = (model: AntigravityModelInfo) => (
+    <ModelOption
+      key={model.id}
+      provider="antigravity"
+      active={activeModel === model.id}
+      title={model.displayName}
+      subtitle={`${model.id}${isNewSinceCheck(checks, "antigravity", model.id) ? " · not checked" : ""}`}
+      onSelect={() => onSelect(model.id)}
+    />
+  );
+  return (
+    <Section provider="antigravity" title="Antigravity">
+      {latest.map(row)}
+      <OlderModels label="Other models" count={other.length} defaultOpen={other.some((m) => m.id === activeModel)}>
+        {other.map(row)}
       </OlderModels>
     </Section>
   );

@@ -1,4 +1,4 @@
-import type { ClaudeModelInfo, ModelChecks, Provider } from "./types";
+import type { ClaudeModelInfo, CodexModelInfo, ModelChecks, Provider } from "./types";
 import { CLAUDE_DEFAULT_MODEL } from "./claudeModels";
 
 /**
@@ -16,6 +16,21 @@ export function splitClaudeModels(models: readonly ClaudeModelInfo[]): {
   // A list with no aliases at all: showing everything beats showing nothing.
   if (latest.length === 0) return { latest: named, older: [] };
   return { latest, older: named.filter((m) => m.value.startsWith("claude-")) };
+}
+
+/**
+ * Splits Codex's model list into the current models and the ones Codex itself calls "Previous
+ * generation" or "Legacy" in their description. The default model always stays current. A list
+ * where every model is marked old shows everything rather than nothing.
+ */
+export function splitCodexModels(models: readonly CodexModelInfo[]): {
+  latest: CodexModelInfo[];
+  older: CodexModelInfo[];
+} {
+  const isOlder = (m: CodexModelInfo): boolean => !m.isDefault && /^(previous generation|legacy)\b/i.test(m.description.trim());
+  const latest = models.filter((m) => !isOlder(m));
+  if (latest.length === 0) return { latest: [...models], older: [] };
+  return { latest, older: models.filter(isOlder) };
 }
 
 /** True when a check found the model unusable. Models never checked, or checked ok, stay. */
