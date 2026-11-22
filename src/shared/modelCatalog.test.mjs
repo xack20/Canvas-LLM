@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { classifyFailure, hasUnchecked, isFailed, isNewSinceCheck, splitClaudeModels, withoutFailed } from "./modelCatalog.ts";
+import { classifyFailure, hasUnchecked, isFailed, isNewSinceCheck, splitClaudeModels, splitCodexModels, withoutFailed } from "./modelCatalog.ts";
 
 const m = (value) => ({ value, displayName: value, description: "", supportedEffortLevels: [] });
 // The list Claude Code returned for this account on 2026-11-04.
@@ -19,6 +19,30 @@ test("Claude: a list with no aliases shows everything rather than nothing", () =
   const { latest, older } = splitClaudeModels([m("default"), m("claude-opus-4-6")]);
   expect(latest.map((x) => x.value)).toEqual(["claude-opus-4-6"]);
   expect(older).toEqual([]);
+});
+
+const cx = (id, description, isDefault = false) => ({ id, displayName: id, description, isDefault });
+// The list Codex returned for this account on 2026-11-22 (hidden models left out).
+const codex = [
+  cx("gpt-6.2-sol", "Fast, go-to model for coding and everyday work.", true),
+  cx("gpt-6.2-astra", "Our most capable model for complex coding and professional work."),
+  cx("gpt-6.1-terra", "Efficient model that excels at visual understanding."),
+  cx("gpt-6.1-sol", "Previous generation model for coding and everyday work."),
+  cx("gpt-6-astra", "Previous generation model for complex coding."),
+  cx("gpt-6-luna", "Fast and affordable model for easier tasks."),
+  cx("gpt-5.6-sol", "Legacy model for coding and everyday work."),
+];
+
+test("Codex: models Codex calls previous generation or legacy are older", () => {
+  const { latest, older } = splitCodexModels(codex);
+  expect(latest.map((x) => x.id)).toEqual(["gpt-6.2-sol", "gpt-6.2-astra", "gpt-6.1-terra", "gpt-6-luna"]);
+  expect(older.map((x) => x.id)).toEqual(["gpt-6.1-sol", "gpt-6-astra", "gpt-5.6-sol"]);
+});
+
+test("Codex: the default stays current even when its description says legacy; an all-old list shows everything", () => {
+  expect(splitCodexModels([cx("a", "Legacy model.", true), cx("b", "Legacy model.")]).latest.map((x) => x.id)).toEqual(["a"]);
+  const allOld = [cx("a", "Legacy model."), cx("b", "Previous generation model.")];
+  expect(splitCodexModels(allOld)).toEqual({ latest: allOld, older: [] });
 });
 
 const checks = {

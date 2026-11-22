@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { GitCompare } from "lucide-react";
 import type { AntigravityModelInfo, CodexModelInfo, KimiModelInfo, LocalModelInfo, NodeId, Provider } from "@shared/types";
 import { findClaudeModel } from "@shared/claudeModels";
-import { splitClaudeModels, withoutFailed } from "@shared/modelCatalog";
+import { splitClaudeModels, splitCodexModels, withoutFailed } from "@shared/modelCatalog";
 import { useCanvasStore } from "@/hooks/useCanvasStore";
 import { useClaudeModelList } from "@/hooks/useClaudeModels";
 import { useCompareStore } from "@/hooks/useCompareStore";
@@ -109,7 +109,7 @@ function CompareModelRows({ ownKey, picked, full, onToggle }: RowsProps) {
   const groups = useMemo(() => {
     const claudeLatest = withoutFailed(splitClaudeModels(claude ?? []).latest, "claude", checks, (m) => m.value);
     const claudeTargets = claudeLatest.map((m) => ({ provider: "claude" as const, model: m.value, label: m.displayName }));
-    const codexTargets = withoutFailed(codex, "codex", checks, (m) => m.id).map((m) => ({
+    const codexTargets = withoutFailed(splitCodexModels(codex).latest, "codex", checks, (m) => m.id).map((m) => ({
       provider: "codex" as const,
       model: m.id,
       label: m.displayName,
@@ -120,7 +120,12 @@ function CompareModelRows({ ownKey, picked, full, onToggle }: RowsProps) {
       checks,
       (m) => m.id,
     ).map((m) => ({ provider: "kimi" as const, model: m.id, label: m.displayName }));
-    const antigravityTargets = withoutFailed(antigravity, "antigravity", checks, (m) => m.id).map((m) => ({
+    const antigravityTargets = withoutFailed(
+      antigravity.filter((m) => m.latest),
+      "antigravity",
+      checks,
+      (m) => m.id,
+    ).map((m) => ({
       provider: "antigravity" as const,
       model: m.id,
       label: m.displayName,

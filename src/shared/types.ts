@@ -161,6 +161,8 @@ export type CodexRuntimeInfo = {
 export type AntigravityModelInfo = {
   id: string;
   displayName: string;
+  /** The account's default model and its effort variants. The rest sit under "Other models". */
+  latest: boolean;
 };
 
 /** A model alias from the user's Kimi config. `id` is what `kimi -m` takes. */

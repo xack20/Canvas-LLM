@@ -8,15 +8,25 @@ import { consumeJsonl } from "./jsonlReader";
 const LIST_TIMEOUT_MS = 15_000;
 const CACHE_MS = 60_000;
 
-/** The models in `agy`'s `session/new` result; entries without an id are skipped. */
+/** `gemini-3.8-flash-low` and `gemini-3.8-flash-high` are one model at different effort levels. */
+const baseModel = (id: string): string => id.replace(/-(?:low|medium|high|xhigh|max)$/, "");
+
+/**
+ * The models in `agy`'s `session/new` result; entries without an id are skipped. The account's
+ * default model and its effort variants are "latest"; if no default is reported, all are.
+ */
 export function parseAntigravityModels(sessionNew: unknown): AntigravityModelInfo[] {
-  const list = (sessionNew as { models?: { availableModels?: unknown } } | null | undefined)?.models?.availableModels;
+  const models = (sessionNew as { models?: { availableModels?: unknown; currentModelId?: unknown } } | null | undefined)?.models;
+  const list = models?.availableModels;
   if (!Array.isArray(list)) return [];
-  return list.flatMap((m: { modelId?: unknown; name?: unknown } | null) =>
+  const current = typeof models?.currentModelId === "string" ? baseModel(models.currentModelId) : undefined;
+  const infos = list.flatMap((m: { modelId?: unknown; name?: unknown } | null) =>
     typeof m?.modelId === "string" && m.modelId
-      ? [{ id: m.modelId, displayName: typeof m.name === "string" && m.name ? m.name : m.modelId }]
+      ? [{ id: m.modelId, displayName: typeof m.name === "string" && m.name ? m.name : m.modelId, latest: true }]
       : [],
   );
+  const hasCurrent = current !== undefined && infos.some((m) => baseModel(m.id) === current);
+  return hasCurrent ? infos.map((m) => ({ ...m, latest: baseModel(m.id) === current })) : infos;
 }
 
 let cache: { bin: string; at: number; models: AntigravityModelInfo[] } | undefined;

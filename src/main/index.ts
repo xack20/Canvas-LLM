@@ -1,7 +1,7 @@
 import { listAntigravityModels } from "./agents/antigravityModels";
 import { listKimiModels } from "./agents/kimiModels";
 import { listLocalModels } from "./agents/local/servers";
-import { splitClaudeModels } from "@shared/modelCatalog";
+import { splitClaudeModels, splitCodexModels } from "@shared/modelCatalog";
 import { TREE_PLAN_INSTRUCTION } from "@shared/treeOutline";
 import { applyModelChecks, runModelChecks, type Candidate } from "./modelCheck";
 import { createProbe } from "./modelProbes";
@@ -909,13 +909,15 @@ function registerIpc(): void {
             model: m.value,
           })),
           ...(await getCodexRuntimeInfo(binOf("codex") ?? "codex").then(
-            (rt) => rt.models.map((m) => ({ provider: "codex" as const, model: m.id })),
+            (rt) => splitCodexModels(rt.models).latest.map((m) => ({ provider: "codex" as const, model: m.id })),
             () => [], // Codex isn't installed or signed in: nothing to check
           )),
           ...(await listKimiModels())
             .filter((m) => m.latest)
             .map((m) => ({ provider: "kimi" as const, model: m.id })),
-          ...(await listAntigravityModels(binOf("antigravity"))).map((m) => ({
+          ...(await listAntigravityModels(binOf("antigravity")))
+            .filter((m) => m.latest)
+            .map((m) => ({
             provider: "antigravity" as const,
             model: m.id,
           })),
