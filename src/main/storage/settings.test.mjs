@@ -35,6 +35,17 @@ describe("last node settings", () => {
   });
 });
 
+describe("system prompt", () => {
+  test("is saved and read back, and a stored value that isn't text reads as empty", async () => {
+    const current = await settings.readSettings();
+    await settings.writeSettings({ ...current, systemPrompt: "Keep replies short." });
+    expect((await settings.readSettings()).systemPrompt).toBe("Keep replies short.");
+
+    await settings.writeSettings({ ...current, systemPrompt: 5 });
+    expect((await settings.readSettings()).systemPrompt).toBe("");
+  });
+});
+
 describe("browser access settings", () => {
   test("default to off with keep-awake on", async () => {
     expect((await settings.readSettings()).browserAccess).toEqual({ enabled: false, keepAwake: true });

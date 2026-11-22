@@ -117,6 +117,7 @@ function mergeWithDefaults(s: Partial<AppSettings>): AppSettings {
   return {
     ...DEFAULTS,
     ...s,
+    systemPrompt: typeof s.systemPrompt === "string" ? s.systemPrompt : "",
     providers,
     recentFolders: sanitizeRecents(s.recentFolders),
     recentBranches: sanitizeRecents(s.recentBranches),
